@@ -107,6 +107,29 @@ def find_widest_contours(image, num_contours, dilation_scale=8):
     return contours_rects[:num_contours]
 
 
+def get_enclosed_rectangle(rect1, rect2):
+    """
+        Returns the rectangle enclosed between two non-overlapping rectangles
+
+        Args:
+            rect1: rectangle in the form of a tuple
+                (top left x, top left y, width, height)
+            rect2: same as rect1
+
+        Returns:
+            Enclosed rectangle in the same form as the parameters
+    """
+    min_x = min(rect1[0], rect2[0])
+    min_y = min(rect1[1], rect2[1])
+
+    width = max(rect1[0] - min_x + rect1[2], rect2[0] - min_x + rect2[2])
+    # Height of the topmost rectangle
+    top_height = rect1[3] if rect1[1] < rect2[1] else rect2[3]
+    height = abs(rect1[1] - rect2[1]) - top_height
+
+    return min_x, min_y + top_height, width, height
+
+
 def show_image(image, wait_time=0, window_name='Image'):
     """
         Display an image using OpenCV

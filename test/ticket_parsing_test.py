@@ -32,7 +32,8 @@ class TicketParsingTest(unittest.TestCase):
         self.tickets = {}
         for ticket in self.data_json['tickets']:
             filename = ticket['filename']
-            self.tickets[filename] = euro.Ticket(filename)
+            file_path = os.path.join(self.TEST_DATA_FOLDER, filename)
+            self.tickets[filename] = euro.Ticket(file_path)
 
     def test_number_sets(self):
         for ticket in self.data_json['tickets']:
@@ -46,8 +47,6 @@ class TicketParsingTest(unittest.TestCase):
                              self.tickets[filename].get_stars(),
                              '%s has the correct stars' % filename)
 
-    def test_example(self):
-        self.assertEqual(2, 2)
 
 if __name__ == '__main__':
     nose.main()
