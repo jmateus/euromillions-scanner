@@ -12,16 +12,18 @@ class Ticket:
         and stars
 
         Attributes:
-            ticket_image: OpenCV image of the ticket
-            _numbers: Array with the sets of numbers in the ticket
-            _stars: Array with the sets of lucky stars in the ticket
+            ticket_image: image of the full ticket
+            numbers_img; image of the numbers' area of the ticket
+            ticket_numbers: array of pairs (numvers, stars)
     """
 
+    # Regular expressions used to extract the digits from the ticket text
     GENERAL_REGEX = r'^.*%s\s?((?:\d[^\d\nEN]*){%s})\n?'
     NUMBERS_REGEX = GENERAL_REGEX % ('N', 2 * 5)
     STARS_REGEX = GENERAL_REGEX % ('E', 2 * 2)
 
-    WHITELISTED_CHARS = '0123456789NE.'
+    WHITELISTED_CHARS = '0123456789NE.'  # Characters used in the numbers' area
+    TICKET_SIZE = (600, 600)
 
     def __init__(self, image_path):
         """
@@ -31,17 +33,21 @@ class Ticket:
                 image_path: a string containing the path to an image of a
                     ticket
         """
-        img, original = create_binary_image(image_path, (600, 600))
+        # By resizing the image to a predetermined size, it becomes
+        # easier to find the widest contours.
+        img = create_binary_image(image_path, Ticket.TICKET_SIZE)
         inverted_img = invert_image(img)
 
+        # Find the two widest contours in the image.
+        # These should be the double-dashed lines above and below the
+        # area of the ticket where the numbers area.
         contours = find_widest_contours(inverted_img, 2)
         numbers_rect = get_enclosed_rectangle(contours[0], contours[1])
         numbers_img = crop_image(img, numbers_rect)
 
         self.ticket_image = img
+        self.numbers_img = numbers_img
         self.ticket_numbers = self.parse_ticket(numbers_img)
-        self.numbers = [t[0] for t in self.ticket_numbers]
-        self.stars = [t[1] for t in self.ticket_numbers]
 
     @staticmethod
     def parse_ticket(numbers_img):
@@ -98,13 +104,25 @@ class Ticket:
         """
             Returns the array with the sets of numbers of the ticket
         """
-        return self.numbers
+        return [t[0] for t in self.ticket_numbers]
 
     def get_stars(self):
         """
             Returns the array with the sets of lucky stars of the ticket
         """
-        return self.stars
+        return [t[1] for t in self.ticket_numbers]
+
+    def __getitem__(self, key):
+        """
+            Returns the set (pair of numbers and stars) with the index key
+        """
+        return self.ticket_numbers[key]
+
+    def number_sets(self):
+        """
+            Returns the number of sets (pairs of numbers and stars) of the ticket
+        """
+        return len(self.ticket_numbers)
 
 
 """General purpose auxiliary methods"""
@@ -127,7 +145,7 @@ def create_binary_image(image_path, max_size):
     (thresh, binary_image) = cv2.threshold(image, 0, 255,
                                            cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-    return binary_image, image
+    return binary_image
 
 
 def invert_image(image):
@@ -307,6 +325,8 @@ def _main():
 
     print t.get_numbers()
     print t.get_stars()
+    print t.number_sets()
+    print t[0]
 
     show_image(t.ticket_image)
 

@@ -47,13 +47,13 @@ class TicketParsingTest(unittest.TestCase):
         for ticket in self.data_json['tickets']:
             filename = ticket['filename']
 
-            diffs = compare_arrays(ticket['numbers'],
-                                   self.tickets[filename].get_numbers())
+            diffs = compare_sets(ticket['numbers'],
+                                 self.tickets[filename].get_numbers())
             self.assertLessEqual(diffs, TicketParsingTest.MAX_DIFFERENCE)
             total_diffs += diffs
 
-            diffs = compare_arrays(ticket['stars'],
-                                   self.tickets[filename].get_stars())
+            diffs = compare_sets(ticket['stars'],
+                                 self.tickets[filename].get_stars())
             self.assertLessEqual(diffs, TicketParsingTest.MAX_DIFFERENCE)
             total_diffs += diffs
 
@@ -80,7 +80,7 @@ class TicketParsingTest(unittest.TestCase):
         self.assertEqual(stars, parsed_stars)
 
 
-def compare_arrays(arr1, arr2):
+def compare_sets(arr1, arr2):
     """
         Method used to obtain the number of errors in the numbers returned
         by the scanner.
