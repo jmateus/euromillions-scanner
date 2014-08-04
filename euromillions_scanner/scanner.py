@@ -1,5 +1,8 @@
 import cv2
+from cv2 import cv
+import tesseract
 import numpy as np
+import os
 
 
 class Ticket:
@@ -148,6 +151,32 @@ def crop_image(image, rect):
     return image[point1[1]:point2[1], point1[0]:point2[0]]
 
 
+def get_image_text(image, whitelist=None):
+    """
+        Uses Tesseract to extract text from a grayscale image
+
+        Args:
+            image: a grayscale image
+            whitelist: string with the characters that should be detected.
+                If nothing is passed, every character is whitelisted
+
+        Returns:
+            A string with the text of the image
+    """
+    cv_image = _convert_image_cv2_to_cv(image)
+
+    api = tesseract.TessBaseAPI()
+    api.Init(os.path.dirname(__file__), 'eng', tesseract.OEM_DEFAULT)
+
+    if whitelist is not None:
+        api.SetVariable('tessedit_char_whitelist', whitelist)
+
+    api.SetPageSegMode(tesseract.PSM_SINGLE_BLOCK)
+    tesseract.SetCvImage(cv_image, api)
+
+    return api.GetUTF8Text()
+
+
 def show_image(image, wait_time=0, window_name='Image'):
     """
         Display an image using OpenCV
@@ -186,6 +215,13 @@ def _draw_rectangles(image, rects, color, thickness=1):
     return image_copy
 
 
+def _convert_image_cv2_to_cv(image, channels=1):
+    img_ipl = cv.CreateImageHeader((image.shape[1], image.shape[0]), cv.IPL_DEPTH_8U, channels)
+    cv.SetData(img_ipl, image.tostring(), image.dtype.itemsize * channels * image.shape[1])
+
+    return img_ipl
+
+
 def _main():
     img = create_binary_image('test/data/euro.jpg', (600, 600))
     inverted_img = invert_image(img)
@@ -200,6 +236,12 @@ def _main():
     numbers_img = crop_image(img, numbers_rect)
 
     show_image(numbers_img)
+
+    import os
+    print os.path.dirname(__file__)
+
+    whitelisted_chars = '0123456789NE.'
+    print get_image_text(numbers_img, whitelisted_chars)
 
 
 if __name__ == '__main__':
