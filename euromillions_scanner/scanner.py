@@ -130,6 +130,24 @@ def get_enclosed_rectangle(rect1, rect2):
     return min_x, min_y + top_height, width, height
 
 
+def crop_image(image, rect):
+    """
+        Crops an image using the rectangle passed as parameter
+
+        Args:
+            image: the image to crop
+            rect: a rectangle in the form of a tuple that defines the area we
+                want to crop (top left x, top left y, width, height)
+
+        Returns:
+            The cropped image
+    """
+    point1 = (rect[0], rect[1])  # Top-left point
+    point2 = (rect[0] + rect[2], rect[1] + rect[3])  # Lower right point
+
+    return image[point1[1]:point2[1], point1[0]:point2[0]]
+
+
 def show_image(image, wait_time=0, window_name='Image'):
     """
         Display an image using OpenCV
@@ -137,28 +155,51 @@ def show_image(image, wait_time=0, window_name='Image'):
         Args:
             image: image we want to display
             wait_time: how long (in milliseconds) should the image be displayed
+                (defaults to infinite)
             window_name: name of the window (defaults to 'Image')
     """
     cv2.imshow(window_name, image)
     cv2.waitKey(wait_time)
 
 
-def _main():
-    img = create_binary_image('test/data/euro.jpg', (600, 600))
-    inverted_img = invert_image(img)
-    show_image(inverted_img, 2000)
+def _draw_rectangles(image, rects, color, thickness=1):
+    """
+        Draws the rectangles contained in rects on the image
 
-    contours = find_widest_contours(inverted_img, 2)
+        Args:
+            image: image which will be used to draw the rectangles
+            rects: an array of tuples representing rectangles
+                (top left x, top left y, width, height)
+            color: RGB tuple or brightness (for grayscale images)
+            thickness: thickness of the lines of the rectangle (defaults to 1)
 
-    # Colored image used to draw the contours
-    color_img = cv2.cvtColor(inverted_img, cv2.COLOR_GRAY2BGR)
-    for rect in contours:
+        Returns:
+            A new image with the drawn rectangles
+    """
+    image_copy = image.copy()
+    for rect in rects:
         point1 = (rect[0], rect[1])
         point2 = (rect[0] + rect[2], rect[1] + rect[3])
 
-        cv2.rectangle(color_img, point1, point2, (0, 255, 0), 1)
+        cv2.rectangle(image_copy, point1, point2, color, thickness)
+
+    return image_copy
+
+
+def _main():
+    img = create_binary_image('test/data/euro.jpg', (600, 600))
+    inverted_img = invert_image(img)
+
+    contours = find_widest_contours(inverted_img, 2)
+    color_img = cv2.cvtColor(inverted_img, cv2.COLOR_GRAY2BGR)
+    color_img = _draw_rectangles(color_img, contours, (0, 255, 0))
 
     show_image(color_img)
+
+    numbers_rect = get_enclosed_rectangle(contours[0], contours[1])
+    numbers_img = crop_image(img, numbers_rect)
+
+    show_image(numbers_img)
 
 
 if __name__ == '__main__':
