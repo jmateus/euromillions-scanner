@@ -3,11 +3,13 @@ from cv2 import cv
 import tesseract
 import numpy as np
 import os
+import re
 
 
 class Ticket:
     """
-        Parses an image of a EuroMillions ticket and extracts the numbers and stars
+        Parses an image of a EuroMillions ticket and extracts the numbers
+        and stars
 
         Attributes:
             ticket_image: OpenCV image of the ticket
@@ -15,28 +17,94 @@ class Ticket:
             _stars: Array with the sets of lucky stars in the ticket
     """
 
+    GENERAL_REGEX = r'^.*%s\s?((?:\d[^\d\nEN]*){%s})\n?'
+    NUMBERS_REGEX = GENERAL_REGEX % ('N', 2 * 5)
+    STARS_REGEX = GENERAL_REGEX % ('E', 2 * 2)
+
+    WHITELISTED_CHARS = '0123456789NE.'
+
     def __init__(self, image_path):
         """
             Loads the image located at image_path
 
             Args:
-                image_path: a string containing the path to an image of a ticket
+                image_path: a string containing the path to an image of a
+                    ticket
         """
-        self._ticket_image = create_binary_image(image_path, (600, 600))
-        self._numbers = []
-        self._stars = []
+        img, original = create_binary_image(image_path, (600, 600))
+        inverted_img = invert_image(img)
+
+        contours = find_widest_contours(inverted_img, 2)
+        numbers_rect = get_enclosed_rectangle(contours[0], contours[1])
+        numbers_img = crop_image(img, numbers_rect)
+
+        self.ticket_image = img
+        self.ticket_numbers = self.parse_ticket(numbers_img)
+        self.numbers = [t[0] for t in self.ticket_numbers]
+        self.stars = [t[1] for t in self.ticket_numbers]
+
+    @staticmethod
+    def parse_ticket(numbers_img):
+        """
+            Parses a ticket and extracts the numbers and stars.
+
+            Args:
+                numbers_img: image of the area of the ticket with the numbers
+
+            Returns:
+                An array of tuples. Each tuple has two arrays: the first one
+                contains the 5 numbers of the set, and the second one has the
+                2 lucky stars.
+        """
+        text = get_image_text(numbers_img, Ticket.WHITELISTED_CHARS)
+
+        numbers = Ticket.parse_numbers(text, Ticket.NUMBERS_REGEX)
+        stars = Ticket.parse_numbers(text, Ticket.STARS_REGEX)
+
+        ticket = zip(numbers, stars)
+
+        return ticket
+
+    @staticmethod
+    def parse_numbers(text, regex):
+        """
+            Gets the digits in the text based on a regular regex and
+            pair them 2 by 2.
+
+            Args:
+                text: text we want to parse
+                regex: regular expression used to extract the digits
+
+            Returns:
+                An array of numbers
+        """
+        # TODO: Find a better and simpler solution
+
+        # Find the first n digits
+        parser = re.compile(regex, re.M)
+        matches = parser.findall(text)
+
+        # Get all the digits in the regular expression
+        digits = map(lambda s: re.findall(r'\d', s), matches)
+
+        # Join the digits 2 by 2 and convert to int
+        numbers = map(lambda a: [i + j for i, j in zip(a[0::2], a[1::2])],
+                      digits)
+        numbers = map(lambda a: [int(x) for x in a], numbers)
+
+        return numbers
 
     def get_numbers(self):
         """
             Returns the array with the sets of numbers of the ticket
         """
-        return self._numbers
+        return self.numbers
 
     def get_stars(self):
         """
             Returns the array with the sets of lucky stars of the ticket
         """
-        return self._stars
+        return self.stars
 
 
 """General purpose auxiliary methods"""
@@ -55,11 +123,11 @@ def create_binary_image(image_path, max_size):
             A binary image
     """
     image = cv2.imread(image_path, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-    binary_image = cv2.resize(image, max_size)  # TODO: Do not distort image
-    (thresh, binary_image) = cv2.threshold(binary_image, 0, 255,
+    image = cv2.resize(image, max_size)  # TODO: Do not distort image
+    (thresh, binary_image) = cv2.threshold(image, 0, 255,
                                            cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-    return binary_image
+    return binary_image, image
 
 
 def invert_image(image):
@@ -90,7 +158,7 @@ def find_widest_contours(image, num_contours, dilation_scale=8):
         Returns:
             The num_contours widest contours of the image
     """
-    # TODO: try solving this using the Hough transform algorithm
+    # TODO: solve this using the Hough transform algorithm
 
     # Create the dilation matrix
     dilation_mat = np.zeros((dilation_scale, dilation_scale), np.uint8)
@@ -163,7 +231,7 @@ def get_image_text(image, whitelist=None):
         Returns:
             A string with the text of the image
     """
-    cv_image = _convert_image_cv2_to_cv(image)
+    cv_image = convert_image_cv2_to_cv(image)
 
     api = tesseract.TessBaseAPI()
     api.Init(os.path.dirname(__file__), 'eng', tesseract.OEM_DEFAULT)
@@ -191,7 +259,7 @@ def show_image(image, wait_time=0, window_name='Image'):
     cv2.waitKey(wait_time)
 
 
-def _draw_rectangles(image, rects, color, thickness=1):
+def draw_rectangles(image, rects, color, thickness=1):
     """
         Draws the rectangles contained in rects on the image
 
@@ -215,33 +283,32 @@ def _draw_rectangles(image, rects, color, thickness=1):
     return image_copy
 
 
-def _convert_image_cv2_to_cv(image, channels=1):
-    img_ipl = cv.CreateImageHeader((image.shape[1], image.shape[0]), cv.IPL_DEPTH_8U, channels)
+def convert_image_cv2_to_cv(image, depth=cv.IPL_DEPTH_8U, channels=1):
+    """
+        Converts an OpenCV2 wrapper of an image to an OpenCV1 wrapper.
+        Source: http://stackoverflow.com/a/17170855
+
+        Args:
+            image: image used by OpenCV2
+            depth: depth of each channel of the image
+            channels: number of channels
+
+        Returns:
+            OpenCV wrapper of the image passed as an argument
+    """
+    img_ipl = cv.CreateImageHeader((image.shape[1], image.shape[0]), depth, channels)
     cv.SetData(img_ipl, image.tostring(), image.dtype.itemsize * channels * image.shape[1])
 
     return img_ipl
 
 
 def _main():
-    img = create_binary_image('test/data/euro.jpg', (600, 600))
-    inverted_img = invert_image(img)
+    t = Ticket('test/data/euro.jpg')
 
-    contours = find_widest_contours(inverted_img, 2)
-    color_img = cv2.cvtColor(inverted_img, cv2.COLOR_GRAY2BGR)
-    color_img = _draw_rectangles(color_img, contours, (0, 255, 0))
+    print t.get_numbers()
+    print t.get_stars()
 
-    show_image(color_img)
-
-    numbers_rect = get_enclosed_rectangle(contours[0], contours[1])
-    numbers_img = crop_image(img, numbers_rect)
-
-    show_image(numbers_img)
-
-    import os
-    print os.path.dirname(__file__)
-
-    whitelisted_chars = '0123456789NE.'
-    print get_image_text(numbers_img, whitelisted_chars)
+    show_image(t.ticket_image)
 
 
 if __name__ == '__main__':
