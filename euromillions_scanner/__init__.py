@@ -1,1 +1,1 @@
-from Ticket import Ticket
+from .scanner import Ticket
