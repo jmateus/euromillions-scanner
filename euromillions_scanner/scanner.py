@@ -125,8 +125,7 @@ class Ticket:
         return len(self.ticket_numbers)
 
 
-"""General purpose auxiliary methods"""
-
+## General purpose auxiliary methods
 
 def create_binary_image(image_path, max_size):
     """
