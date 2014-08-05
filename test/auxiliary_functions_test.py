@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import unittest
 import nose
 from euromillions_scanner import scanner
@@ -43,7 +45,7 @@ class ResizeFunctionTest(unittest.TestCase):
         self.assertEqual(size, new_size)
 
     def test_resize_to_smaller_dimensions(self):
-        size = (200, 250)
+        size = (400, 300)
         max_size = (100, 100)
         new_size = scanner.resize(size, max_size)
 

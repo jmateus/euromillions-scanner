@@ -1,0 +1,2 @@
+include euromillions_scanner/tessdata/*
+include README.md LICENSE.md

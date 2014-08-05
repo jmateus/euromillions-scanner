@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import cv2
 from cv2 import cv
 import tesseract
@@ -100,7 +102,7 @@ class Ticket:
 
         return numbers
 
-    def get_numbers(self):
+    def get_main_numbers(self):
         """
             Returns the array with the sets of numbers of the ticket
         """
@@ -120,7 +122,8 @@ class Ticket:
 
     def number_sets(self):
         """
-            Returns the number of sets (pairs of numbers and stars) of the ticket
+            Returns the number of sets (pairs of numbers and stars) of the
+            ticket
         """
         return len(self.ticket_numbers)
 
@@ -134,7 +137,8 @@ def create_binary_image(image_path, max_size=None):
 
         Args:
             image_path: a string containing the path to an image
-            max_size: a tuple defining the maximum size of the image (width, height)
+            max_size: a tuple defining the maximum size of the image
+                (width, height)
 
         Returns:
             A binary image
@@ -336,8 +340,10 @@ def convert_image_cv2_to_cv(image, depth=cv.IPL_DEPTH_8U, channels=1):
         Returns:
             OpenCV wrapper of the image passed as an argument
     """
-    img_ipl = cv.CreateImageHeader((image.shape[1], image.shape[0]), depth, channels)
-    cv.SetData(img_ipl, image.tostring(), image.dtype.itemsize * channels * image.shape[1])
+    img_ipl = cv.CreateImageHeader((image.shape[1], image.shape[0]),
+                                   depth, channels)
+    cv.SetData(img_ipl, image.tostring(),
+               image.dtype.itemsize * channels * image.shape[1])
 
     return img_ipl
 
@@ -345,7 +351,7 @@ def convert_image_cv2_to_cv(image, depth=cv.IPL_DEPTH_8U, channels=1):
 def _main():
     t = Ticket('test/data/euro.jpg')
 
-    print t.get_numbers()
+    print t.get_main_numbers()
     print t.get_stars()
     print t.number_sets()
     print t[0]

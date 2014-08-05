@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import unittest
 import nose
 import os
@@ -48,7 +50,7 @@ class TicketParsingTest(unittest.TestCase):
             filename = ticket['filename']
 
             diffs = compare_sets(ticket['numbers'],
-                                 self.tickets[filename].get_numbers())
+                                 self.tickets[filename].get_main_numbers())
             self.assertLessEqual(diffs, TicketParsingTest.MAX_DIFFERENCE)
             total_diffs += diffs
 
