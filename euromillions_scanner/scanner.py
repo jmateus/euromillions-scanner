@@ -127,7 +127,7 @@ class Ticket:
 
 ## General purpose auxiliary methods
 
-def create_binary_image(image_path, max_size):
+def create_binary_image(image_path, max_size=None):
     """
         Opens the image located at image_path and creates a binary image from
         it, using Otsu's binarization.
@@ -140,11 +140,34 @@ def create_binary_image(image_path, max_size):
             A binary image
     """
     image = cv2.imread(image_path, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-    image = cv2.resize(image, max_size)  # TODO: Do not distort image
+
+    if max_size:
+        height, width = image.shape[:2]
+        new_size = resize((width, height), max_size)
+        image = cv2.resize(image, new_size)
+
     (thresh, binary_image) = cv2.threshold(image, 0, 255,
                                            cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     return binary_image
+
+
+def resize((width, height), (max_width, max_height)):
+    """
+        Resizes a tuple of dimensions (width, height) to a maximum size,
+        keeping the aspect ratio
+
+        Args:
+            (width, height): tuple with the dimensions to resize
+            (max_width, height): maximum values of the new dimensions
+
+        Returns:
+            A tuple with the new dimensions (width, height), with the same
+            aspect ratio as the first tuple passed as parameter
+    """
+    scale_factor = min(max_width / float(width), max_height / float(height))
+
+    return int(scale_factor * width), int(scale_factor * height)
 
 
 def invert_image(image):
@@ -160,7 +183,7 @@ def invert_image(image):
     return 255 - image
 
 
-def find_widest_contours(image, num_contours, dilation_scale=8):
+def find_widest_contours(image, num_contours, dilation_scale=10):
     """
         Computes the widest contours of the image passed as parameter
 
