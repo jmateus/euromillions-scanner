@@ -55,8 +55,5 @@ target/
 # PyCharm
 .idea/
 
-# Test images
-*.jpg
-
 # Tesseract data
 euromillions_scanner/tessdata/
